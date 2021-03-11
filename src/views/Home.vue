@@ -17,10 +17,16 @@
       <p>Haz click en una tarea para asignártela</p>
       <div class="task" v-for="(task, index) in tasks" :key="index" @click.stop="askToAcceptTask(task)">
         <div v-if="taskToAccept.task === task.task" class="ask-to-accept">
-          ¿Quieres asignarte esta tarea?
+          <div>
+            <small>{{ task.task }}</small>
+            <p>
+              ¿Qué quieres hacer?
+            </p>
+          </div>
           <div class="actions">
-            <button @click.stop="askToAcceptTask({name: ''})">No</button>
-            <button @click.stop="acceptTask(task)">Si</button>
+            <button @click.stop="acceptTask(task)">✌ Asignarme tarea</button>
+            <button @click.stop="deleteTask(task)">🗑 Borrar tarea</button>
+            <button @click.stop="askToAcceptTask({name: ''})">Cancelar</button>
           </div>
         </div>
         <div v-else>
@@ -74,6 +80,9 @@ export default Vue.extend({
         console.log(this.currentUser)
         this.askToAcceptTask({name: ''})
     },
+    deleteTask(task) {
+      rtdb.ref('tasks/' + task.id).remove()
+    },
     addNewTask() {
       console.log(this.newTask)
       rtdb.ref('tasks/' + getId()).set({
@@ -125,6 +134,10 @@ h1 {
   font-size: 1.5rem;
 }
 
+.home {
+  margin-bottom: 4rem;
+}
+
 .task {
   padding: .7rem;
   border: 1px solid #ddd;
@@ -157,9 +170,12 @@ h1 {
 
 .ask-to-accept {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
   font-weight: 500;
+  small {
+    font-size: 12px;
+    font-weight: 400;
+  }
   .actions {
     button {
       margin: .25rem;
