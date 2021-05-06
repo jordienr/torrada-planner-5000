@@ -6,10 +6,26 @@
     <div class="divider"></div>
     <section id="participants">
       <h2>Participantes</h2>
-      <p>Conectad@ como: {{ currentUser }}</p>
+      <p>Conectad@ como: {{ currentUser.name }}</p>
       <div id="user" v-for="user in users" :key="user.name">
-        <div class="user-ball">{{ user.substring(0, 2) }}</div>
-        {{ user }}
+        <div
+          class="user-ball"
+          :class="{
+            'current-user-ball': user.name === currentUser,
+            'will-attend': user.attendance,
+          }"
+        >
+          {{ user.name.substring(0, 2) }}
+        </div>
+        {{ user.name }}
+      </div>
+    </section>
+
+    <section class="asistiras">
+      <h2>¿Asistirás?</h2>
+      <div>
+        <button @click="setAttendance(true)">Si</button>
+        <button @click="setAttendance(false)">No</button>
       </div>
     </section>
 
@@ -47,12 +63,20 @@
         <input type="text" v-model="newTask" />
         <button @click="addNewTask">+ Añadir</button>
       </div>
+
+      <div>
+        <button @click="logout">
+          😒 Salir
+        </button>
+      </div>
     </section>
-    <div v-if="!currentUser" class="set-username-form">
+    <div v-if="!currentUser.name" class="set-username-form">
       <h1>¿Cómo te llamas?</h1>
       <div class="form">
-        <input type="text" v-model="username" />
-        <button @click="setUsername">Entrar</button>
+        <form>
+          <input type="text" v-model="username" />
+          <button @click="setUsername">Entrar</button>
+        </form>
       </div>
     </div>
   </div>
@@ -72,15 +96,15 @@ export default Vue.extend({
       planTitle: "",
     },
     test: "asd",
-    currentUser: undefined,
+    currentUser: {},
     username: "",
     taskToAccept: { task: "" },
     newTask: "",
   }),
   methods: {
     setUsername() {
-      this.currentUser = this.username;
-      rtdb.ref("users/" + this.username).set(this.username);
+      this.currentUser.name = this.username;
+      rtdb.ref("users/" + this.username).update({ name: this.username });
       window.localStorage.setItem("username", this.username);
     },
     askToAcceptTask(task) {
@@ -89,14 +113,12 @@ export default Vue.extend({
     acceptTask(task) {
       const taskRef = rtdb.ref("tasks/" + task.id);
       taskRef.update({ user: this.currentUser });
-      console.log(this.currentUser);
       this.askToAcceptTask({ name: "" });
     },
     deleteTask(task) {
       rtdb.ref("tasks/" + task.id).remove();
     },
     addNewTask() {
-      console.log(this.newTask);
       rtdb.ref("tasks/" + getId()).set({
         task: this.newTask,
       });
@@ -109,19 +131,27 @@ export default Vue.extend({
         });
       }
     },
+    setAttendance(val) {
+      rtdb.ref("users/jordi").update({
+        attendance: val,
+      });
+    },
+    logout() {
+      this.currentUser = {};
+      this.username = undefined;
+    },
   },
-  mounted() {
+  async mounted() {
     const tasksRef = rtdb.ref("tasks");
     const usersRef = rtdb.ref("users");
     const metaRef = rtdb.ref("meta");
 
     const username = window.localStorage.getItem("username");
     if (username) {
-      this.currentUser = username;
+      this.currentUser.name = username;
     }
 
     // this.meta = metaRef;
-    console.log(metaRef);
     this.meta = metaRef.get();
 
     tasksRef.on("value", (snapshot) => {
@@ -162,6 +192,14 @@ h1 {
 
 .home {
   margin-bottom: 4rem;
+}
+
+.current-user-ball {
+  box-shadow: 0 0 0 2px rgb(0, 0, 0);
+}
+
+.will-attend {
+  background: rgb(36, 177, 36) !important;
 }
 
 .task {
@@ -223,7 +261,7 @@ h1 {
   .user-ball {
     height: 32px;
     width: 32px;
-    background-color: rgb(50, 87, 211);
+    background-color: rgb(241, 18, 18);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -272,6 +310,19 @@ h1 {
     font-weight: 500;
     letter-spacing: 1px;
     font-size: 1rem;
+  }
+}
+
+.asistiras {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  button {
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    width: 44px;
+    margin: 0.25rem;
+    border: none;
   }
 }
 </style>
