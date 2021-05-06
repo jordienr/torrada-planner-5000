@@ -70,19 +70,17 @@
         </button>
       </div>
     </section>
-    <div v-if="!currentUser.name" class="set-username-form">
-      <h1>¿Cómo te llamas?</h1>
-      <div class="form">
-        <form>
-          <input type="text" v-model="username" />
-          <button @click="setUsername">Entrar</button>
-        </form>
+
+    <section class="debug">
+      <div v-for="user in users" :key="user.name">
+        <span>{{ user.name }}</span>
+        <button @click="deleteUser(user.name)">deleteUser</button>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
-<script lang="ts">
+<script>
 import { rtdb } from "@/firebase";
 import Vue from "vue";
 import { v4 as getId } from "uuid";
@@ -96,12 +94,23 @@ export default Vue.extend({
       planTitle: "",
     },
     test: "asd",
-    currentUser: {},
-    username: "",
     taskToAccept: { task: "" },
     newTask: "",
+    showLogin: true,
+    currentUser: {},
   }),
+  computed: {
+    username() {
+      return window.localStorage.getItem("username");
+    },
+    isDebugMode() {
+      return this.$route.params.debug;
+    },
+  },
   methods: {
+    deleteUser(name) {
+      rtdb.ref("users/" + name).remove();
+    },
     setUsername() {
       this.currentUser.name = this.username;
       rtdb.ref("users/" + this.username).update({ name: this.username });
@@ -132,27 +141,32 @@ export default Vue.extend({
       }
     },
     setAttendance(val) {
-      rtdb.ref("users/jordi").update({
+      rtdb.ref("users/" + this.currentUser.name).update({
         attendance: val,
       });
     },
     logout() {
       this.currentUser = {};
       this.username = undefined;
+      window.localStorage.removeItem("username");
+      this.$router.push("/login");
     },
   },
   async mounted() {
     const tasksRef = rtdb.ref("tasks");
     const usersRef = rtdb.ref("users");
     const metaRef = rtdb.ref("meta");
-
     const username = window.localStorage.getItem("username");
-    if (username) {
-      this.currentUser.name = username;
+
+    if (!username) {
+      this.$router.push("/login");
     }
 
-    // this.meta = metaRef;
-    this.meta = metaRef.get();
+    const currentUserRef = rtdb.ref("users/" + username);
+
+    currentUserRef.on("value", (snapshot) => {
+      this.currentUser = snapshot.val();
+    });
 
     tasksRef.on("value", (snapshot) => {
       const tasks = [];
@@ -161,7 +175,7 @@ export default Vue.extend({
         tasks.push({
           id: item.key,
           task: item.val().task,
-          user: item.val().user,
+          user: item.val().user.name,
         });
       });
 
@@ -179,12 +193,16 @@ export default Vue.extend({
 });
 </script>
 
-<style scoped lang="scss">
+<style lang="scss">
 * {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
     Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
   color: #242427;
   font-size: 14px;
+}
+body {
+  max-width: 340px;
+  margin: auto;
 }
 h1 {
   font-size: 1.5rem;
@@ -323,6 +341,13 @@ h1 {
     width: 44px;
     margin: 0.25rem;
     border: none;
+  }
+}
+
+.debug {
+  margin-top: 100px;
+  div {
+    margin-top: 1rem;
   }
 }
 </style>
