@@ -1,12 +1,14 @@
 <template>
   <div class="home">
-    <h1>Puig de Sta. Magdalena</h1>
+    <div @click="changePlanTitle">
+      <h1>{{ meta.planTitle }}</h1>
+    </div>
     <div class="divider"></div>
     <section id="participants">
       <h2>Participantes</h2>
       <p>Conectad@ como: {{ currentUser }}</p>
       <div id="user" v-for="user in users" :key="user.name">
-        <div class="user-ball">{{ user.substring(0,2) }}</div>
+        <div class="user-ball">{{ user.substring(0, 2) }}</div>
         {{ user }}
       </div>
     </section>
@@ -15,7 +17,12 @@
     <section id="tasks">
       <h2>Tareas</h2>
       <p>Haz click en una tarea para asignártela</p>
-      <div class="task" v-for="(task, index) in tasks" :key="index" @click.stop="askToAcceptTask(task)">
+      <div
+        class="task"
+        v-for="(task, index) in tasks"
+        :key="index"
+        @click.stop="askToAcceptTask(task)"
+      >
         <div v-if="taskToAccept.task === task.task" class="ask-to-accept">
           <div>
             <small>{{ task.task }}</small>
@@ -26,23 +33,25 @@
           <div class="actions">
             <button @click.stop="acceptTask(task)">✌ Asignarme tarea</button>
             <button @click.stop="deleteTask(task)">🗑 Borrar tarea</button>
-            <button @click.stop="askToAcceptTask({name: ''})">Cancelar</button>
+            <button @click.stop="askToAcceptTask({ name: '' })">
+              Cancelar
+            </button>
           </div>
         </div>
         <div v-else>
           <p class="task-name">{{ task.task }}</p>
-          <p class="task-user">{{ task.user}}</p>
+          <p class="task-user">{{ task.user }}</p>
         </div>
       </div>
       <div class="new-task">
-        <input type="text" v-model="newTask">
+        <input type="text" v-model="newTask" />
         <button @click="addNewTask">+ Añadir</button>
       </div>
     </section>
     <div v-if="!currentUser" class="set-username-form">
       <h1>¿Cómo te llamas?</h1>
       <div class="form">
-        <input type="text" v-model="username">
+        <input type="text" v-model="username" />
         <button @click="setUsername">Entrar</button>
       </div>
     </div>
@@ -50,83 +59,100 @@
 </template>
 
 <script lang="ts">
-import { rtdb } from '@/firebase'
-import Vue from 'vue';
-import { v4 as getId } from 'uuid';
+import { rtdb } from "@/firebase";
+import Vue from "vue";
+import { v4 as getId } from "uuid";
 
 export default Vue.extend({
-  name: 'Home',
+  name: "Home",
   data: () => ({
     tasks: [],
     users: [],
-    test: 'asd',
+    meta: {
+      planTitle: "",
+    },
+    test: "asd",
     currentUser: undefined,
     username: "",
-    taskToAccept: { task: '' },
-    newTask: ""
+    taskToAccept: { task: "" },
+    newTask: "",
   }),
   methods: {
     setUsername() {
-      this.currentUser = this.username
-      rtdb.ref('users/' + this.username).set(this.username)
-      window.localStorage.setItem('username', this.username)
+      this.currentUser = this.username;
+      rtdb.ref("users/" + this.username).set(this.username);
+      window.localStorage.setItem("username", this.username);
     },
     askToAcceptTask(task) {
-      this.taskToAccept = task
+      this.taskToAccept = task;
     },
     acceptTask(task) {
-        const taskRef = rtdb.ref('tasks/' + task.id)
-        taskRef.update({ "user": this.currentUser })
-        console.log(this.currentUser)
-        this.askToAcceptTask({name: ''})
+      const taskRef = rtdb.ref("tasks/" + task.id);
+      taskRef.update({ user: this.currentUser });
+      console.log(this.currentUser);
+      this.askToAcceptTask({ name: "" });
     },
     deleteTask(task) {
-      rtdb.ref('tasks/' + task.id).remove()
+      rtdb.ref("tasks/" + task.id).remove();
     },
     addNewTask() {
-      console.log(this.newTask)
-      rtdb.ref('tasks/' + getId()).set({
-        task: this.newTask
-      })
-    }
+      console.log(this.newTask);
+      rtdb.ref("tasks/" + getId()).set({
+        task: this.newTask,
+      });
+    },
+    changePlanTitle() {
+      const newTitle = window.prompt("¿Qué título le quieres poner al plan?");
+      if (newTitle) {
+        rtdb.ref("meta").set({
+          planTitle: newTitle,
+        });
+      }
+    },
   },
   mounted() {
-    
-    const username = window.localStorage.getItem('username')
+    const tasksRef = rtdb.ref("tasks");
+    const usersRef = rtdb.ref("users");
+    const metaRef = rtdb.ref("meta");
+
+    const username = window.localStorage.getItem("username");
     if (username) {
-      this.currentUser = username
+      this.currentUser = username;
     }
 
-    const tasksRef = rtdb.ref('tasks')
-    const usersRef = rtdb.ref('users')
+    // this.meta = metaRef;
+    console.log(metaRef);
+    this.meta = metaRef.get();
 
-    tasksRef.on('value', (snapshot) => {
-      const tasks = []
+    tasksRef.on("value", (snapshot) => {
+      const tasks = [];
 
-      snapshot.forEach(item => {
+      snapshot.forEach((item) => {
         tasks.push({
           id: item.key,
           task: item.val().task,
-          user: item.val().user
-        })
-      })
+          user: item.val().user,
+        });
+      });
 
-      this.tasks = tasks
-    })
+      this.tasks = tasks;
+    });
 
-    usersRef.on('value', snapshot => {
-      this.users = snapshot.val()
-    })
+    usersRef.on("value", (snapshot) => {
+      this.users = snapshot.val();
+    });
 
-
-    
-  }
+    metaRef.on("value", (snapshot) => {
+      this.meta = snapshot.val();
+    });
+  },
 });
 </script>
 
 <style scoped lang="scss">
 * {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
   color: #242427;
   font-size: 14px;
 }
@@ -139,10 +165,10 @@ h1 {
 }
 
 .task {
-  padding: .7rem;
+  padding: 0.7rem;
   border: 1px solid #ddd;
   border-radius: 8px;
-  margin: .4rem;
+  margin: 0.4rem;
   .task-name {
     font-weight: 700;
     text-transform: capitalize;
@@ -160,11 +186,12 @@ h1 {
   input {
     flex-grow: 1;
   }
-  input, button {
+  input,
+  button {
     border-radius: 8px;
-    margin: .25rem;
+    margin: 0.25rem;
     border: 1px solid #ddd;
-    padding: .5rem;
+    padding: 0.5rem;
   }
 }
 
@@ -178,11 +205,11 @@ h1 {
   }
   .actions {
     button {
-      margin: .25rem;
-      padding: .5rem;
+      margin: 0.25rem;
+      padding: 0.5rem;
       min-width: 44px;
       border: 1px solid #ddd;
-      border-radius: .5rem;
+      border-radius: 0.5rem;
       background: none;
     }
   }
@@ -192,7 +219,7 @@ h1 {
   display: inline-block;
   text-align: center;
   color: rgb(148, 148, 148);
-  margin: .25rem;
+  margin: 0.25rem;
   .user-ball {
     height: 32px;
     width: 32px;
@@ -230,13 +257,13 @@ h1 {
     flex-direction: column;
   }
   input {
-    padding: .5rem;
+    padding: 0.5rem;
     display: block;
     border-radius: 8px;
     border: 1px solid #ddd;
   }
   button {
-    padding: .5rem;
+    padding: 0.5rem;
     background-color: rgb(0, 13, 130);
     border: none;
     border-radius: 8px;
