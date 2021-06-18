@@ -6,7 +6,7 @@
     <div class="tasks-container">
       <div class="task" v-for="(task, index) in tasks" :key="index">
         {{ task.task }}
-        <button @click="deleteTask(task.id)">🗑</button>
+        <button @click="deleteTask(task.id, task.task)">🗑</button>
       </div>
     </div>
     <div class="new-task">
@@ -28,20 +28,27 @@ export default Vue.extend({
     tasks: [],
     newTask: "",
     title: "",
+    showDeleteConfirmation: false,
   }),
   computed: {},
   methods: {
     saveNewTask() {
-      console.log("newTask");
+      this.$confetti.start();
       const now = Date.now();
       rtdb.ref("tasks/" + now).set({
         task: this.newTask,
         id: now,
       });
+      this.newTask = "";
+
+      setTimeout(() => {
+        this.$confetti.stop();
+      }, 1000);
     },
-    deleteTask(id) {
-      console.log("deleteTask");
-      rtdb.ref("tasks/" + id).remove();
+    deleteTask(id, task) {
+      if (window.confirm("Seguro que quieres borrar " + task + "?")) {
+        rtdb.ref("tasks/" + id).remove();
+      }
     },
   },
   mounted() {
