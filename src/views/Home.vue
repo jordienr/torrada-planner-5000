@@ -5,9 +5,14 @@
     </div>
     <div class="tasks-container">
       <div class="task" v-for="(task, index) in tasks" :key="index">
-        {{ task.task }}
+        {{ task.task }}<br />
+        {{ task.user }}
         <button @click="deleteTask(task.id, task.task)">🗑</button>
       </div>
+    </div>
+    <div class="name">
+      Nombre: {{ name }}
+      <button @click="changeName">Cambiar</button>
     </div>
     <div class="new-task">
       <input type="text" v-model="newTask" />
@@ -29,6 +34,7 @@ export default Vue.extend({
     newTask: "",
     title: "",
     showDeleteConfirmation: false,
+    name: "",
   }),
   computed: {},
   methods: {
@@ -37,6 +43,7 @@ export default Vue.extend({
       const now = Date.now();
       rtdb.ref("tasks/" + now).set({
         task: this.newTask,
+        user: this.name,
         id: now,
       });
       this.newTask = "";
@@ -50,8 +57,24 @@ export default Vue.extend({
         rtdb.ref("tasks/" + id).remove();
       }
     },
+    getName() {
+      this.name = localStorage.getItem("username");
+    },
+    changeName() {
+      const name = window.prompt("Nombre:");
+
+      if (name) {
+        localStorage.setItem("username", name);
+        this.getName();
+      }
+    },
   },
   mounted() {
+    if (!localStorage.getItem("username")) {
+      this.changeName();
+    } else {
+      this.getName();
+    }
     tasksRef.on("value", (snapshot) => {
       this.tasks = snapshot.val();
     });
@@ -96,6 +119,19 @@ body {
     margin: 0;
   }
 }
+.name {
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #eaeaea;
+  button {
+    font-weight: bold;
+    background: none;
+    border: none;
+    height: 36px;
+  }
+}
 .tasks-container {
   overflow-y: auto;
   flex-grow: 1;
@@ -116,7 +152,6 @@ body {
   padding: 1rem;
   display: flex;
   margin-bottom: 4rem;
-  border-top: 1px solid #eaeaea;
   input,
   button {
     height: 40px;
